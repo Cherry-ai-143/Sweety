@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const pool = require("./config/database");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -9,7 +10,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Health check API
+// Routes
+app.use("/api/auth", authRoutes);
+
+// Health check
 app.get("/api/health", async (req, res) => {
     try {
         const result = await pool.query(
