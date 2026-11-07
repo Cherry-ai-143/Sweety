@@ -1,10 +1,10 @@
 
-const { registerUser } = require("../services/authService");
+const { registerUser, loginUser } = require("../services/authService");
 const generateToken = require("../utils/generateToken");
 
 async function register(req, res) {
     try {
-        const { name, email, password } = req.body;
+        const { name, email, password } = req.body || {};
 
         // Validate required fields.
         if (!name || !email || !password) {
@@ -15,7 +15,7 @@ async function register(req, res) {
         }
 
         // Validate name.
-        if (!name.trim()) {
+        if (typeof name !== "string" || !name.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Name cannot be empty.",
@@ -25,14 +25,17 @@ async function register(req, res) {
         // Validate email format.
         const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (!emailPattern.test(email.trim())) {
+        if (
+            typeof email !== "string" ||
+            !emailPattern.test(email.trim())
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Please enter a valid email address.",
             });
         }
 
-        // Validate password length.
+        // Validate password.
         if (typeof password !== "string" || password.length < 8) {
             return res.status(400).json({
                 success: false,
@@ -40,7 +43,11 @@ async function register(req, res) {
             });
         }
 
-        const user = await registerUser({ name, email, password });
+        const user = await registerUser({
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            password,
+        });
 
         const token = generateToken(user.id);
 
@@ -64,6 +71,67 @@ async function register(req, res) {
     }
 }
 
+async function login(req, res) {
+    try {
+        const { email, password } = req.body || {};
+
+        // Validate required fields.
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: "Email and password are required.",
+            });
+        }
+
+        // Validate email format.
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (
+            typeof email !== "string" ||
+            !emailPattern.test(email.trim())
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Please enter a valid email address.",
+            });
+        }
+
+        // Validate password.
+        if (typeof password !== "string") {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid password.",
+            });
+        }
+
+        const user = await loginUser({
+            email: email.trim().toLowerCase(),
+            password,
+        });
+
+        const token = generateToken(user.id);
+
+        return res.status(200).json({
+            success: true,
+            message: "Login successful.",
+            data: {
+                user,
+                token,
+            },
+        });
+    } catch (error) {
+        console.error("Login error:", error.message);
+
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.statusCode
+                ? error.message
+                : "Something went wrong during login.",
+        });
+    }
+}
+
 module.exports = {
     register,
+    login,
 };
