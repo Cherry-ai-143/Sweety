@@ -70,7 +70,21 @@ async function loginUser({ email, password }) {
     };
 }
 
+
+async function getUserById(userId) {
+    const result = await pool.query(
+        `SELECT id, name, email, created_at
+     FROM users
+     WHERE id = $1`,
+        [userId]
+    );
+
+    return result.rows[0] || null;
+}
+
+
 module.exports = {
     registerUser,
     loginUser,
+    getUserById,
 };

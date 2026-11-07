@@ -4,14 +4,18 @@ const express = require("express");
 const {
     register,
     login,
+    getMe,
 } = require("../controllers/authController");
+
+const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// User registration
+// Public routes
 router.post("/register", register);
-
-// User login
 router.post("/login", login);
+
+// Protected route
+router.get("/me", authMiddleware, getMe);
 
 module.exports = router;

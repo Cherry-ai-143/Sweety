@@ -1,5 +1,5 @@
 
-const { registerUser, loginUser } = require("../services/authService");
+const { registerUser, loginUser, getUserById } = require("../services/authService");
 const generateToken = require("../utils/generateToken");
 
 async function register(req, res) {
@@ -131,7 +131,39 @@ async function login(req, res) {
     }
 }
 
+
+async function getMe(req, res) {
+    try {
+        // User ID comes from the verified JWT middleware.
+        const user = await getUserById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User account not found.",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "User details retrieved successfully.",
+            data: {
+                user,
+            },
+        });
+    } catch (error) {
+        console.error("Get user error:", error.message);
+
+        return res.status(500).json({
+            success: false,
+            message: "Something went wrong while retrieving user details.",
+        });
+    }
+}
+
+
 module.exports = {
     register,
     login,
+    getMe,
 };
