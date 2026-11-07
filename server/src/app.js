@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const pool = require("./config/database");
 const authRoutes = require("./routes/authRoutes");
+const readingRoutes = require("./routes/readingRoutes");
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/readings", readingRoutes);
 
 // Health check
 app.get("/api/health", async (req, res) => {
