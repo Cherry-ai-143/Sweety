@@ -3,6 +3,7 @@ import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import Readings from "./pages/Readings";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -46,6 +47,15 @@ function App() {
         element={
           isAuthenticated
             ? <Dashboard />
+            : <Navigate to="/login" replace />
+        }
+      />
+
+      <Route
+        path="/readings"
+        element={
+          isAuthenticated
+            ? <Readings />
             : <Navigate to="/login" replace />
         }
       />
