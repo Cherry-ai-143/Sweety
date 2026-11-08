@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -32,7 +33,11 @@ function App() {
 
       <Route
         path="/register"
-        element={<div>Register Page Coming Soon</div>}
+        element={
+          isAuthenticated
+            ? <Navigate to="/dashboard" replace />
+            : <Register />
+        }
       />
 
       <Route
