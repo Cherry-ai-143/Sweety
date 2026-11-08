@@ -1,3 +1,4 @@
+
 import apiRequest from "./api";
 
 // Create a glucose reading
@@ -21,7 +22,7 @@ export async function getReadings(token) {
     });
 }
 
-// Get one glucose reading
+// Get a single glucose reading by ID
 export async function getReadingById(id, token) {
     return apiRequest(`/readings/${id}`, {
         method: "GET",
@@ -31,7 +32,7 @@ export async function getReadingById(id, token) {
     });
 }
 
-// Update a glucose reading
+// Update an existing glucose reading
 export async function updateReading(id, readingData, token) {
     return apiRequest(`/readings/${id}`, {
         method: "PUT",
