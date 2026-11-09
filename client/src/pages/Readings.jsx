@@ -1,658 +1,568 @@
-
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-    getReadings,
-    createReading,
-    updateReading,
-    deleteReading,
+  getReadings,
+  deleteReading,
 } from "../services/readingService";
+import {
+  formatDate,
+  toDateInputValue,
+  SLOT_LABELS,
+  SLOT_SHORT_LABELS,
+  getGlucoseStatus,
+  exportReadingsToCSV,
+} from "../utils/glucoseUtils";
+import Button from "../components/common/Button";
+import Input from "../components/common/Input";
+import Select from "../components/common/Select";
+import Pagination from "../components/common/Pagination";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import EmptyState from "../components/common/EmptyState";
+import ErrorState from "../components/common/ErrorState";
+import ReadingModal from "../components/readings/ReadingModal";
+import ConfirmationModal from "../components/common/ConfirmationModal";
 
-const SLOT_LABELS = {
-    MORNING: "Morning (Fasting)",
-    AFTER_BREAKFAST: "After breakfast",
-    AFTER_LUNCH: "After lunch",
-    AFTER_DINNER: "After dinner",
-};
+const PAGE_SIZE = 10;
 
-function getTodayDate() {
-    const today = new Date();
+export default function Readings() {
+  const { token } = useAuth();
+  const outletContext = useOutletContext();
+  const refreshTrigger = outletContext?.refreshTrigger || 0;
 
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+  const [readings, setReadings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-    return `${year}-${month}-${day}`;
-}
+  // Filters
+  const [filterSlot, setFilterSlot] = useState("ALL");
+  const [filterDate, setFilterDate] = useState("");
 
-function formatDate(date) {
-    return new Date(date).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Asia/Kolkata",
-    });
-}
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
 
-function getReadingDate(date) {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Kolkata",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-    }).formatToParts(new Date(date));
+  // Modal States
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingReading, setEditingReading] = useState(null);
 
-    const year = parts.find((part) => part.type === "year").value;
-    const month = parts.find((part) => part.type === "month").value;
-    const day = parts.find((part) => part.type === "day").value;
+  // Delete Confirmation State
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [readingToDelete, setReadingToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-    return `${year}-${month}-${day}`;
-}
+  const fetchReadings = useCallback(async () => {
+    if (!token) return;
+    try {
+      setLoading(true);
+      setError("");
+      const response = await getReadings(token);
+      setReadings(response.data || []);
+    } catch (err) {
+      setError(err.message || "Failed to load glucose readings.");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-function Readings() {
-    const { token, logout } = useAuth();
+  useEffect(() => {
+    fetchReadings();
+  }, [fetchReadings, refreshTrigger]);
 
-    const [readings, setReadings] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+  // Filtered & Sorted Readings
+  const filteredReadings = useMemo(() => {
+    let result = [...readings];
 
-    // Form State
-    const [formData, setFormData] = useState({
-        reading_date: getTodayDate(),
-        time_slot: "MORNING",
-        glucose_value: "",
-    });
+    if (filterSlot !== "ALL") {
+      result = result.filter((r) => r.time_slot === filterSlot);
+    }
 
-    const [formError, setFormError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
-    const [saving, setSaving] = useState(false);
+    if (filterDate) {
+      result = result.filter(
+        (r) => toDateInputValue(r.reading_date) === filterDate
+      );
+    }
 
-    // Editing State
-    const [editingId, setEditingId] = useState(null);
+    // Sort newest first
+    result.sort(
+      (a, b) => new Date(b.reading_date) - new Date(a.reading_date)
+    );
 
-    // Deleting State
-    const [deletingId, setDeletingId] = useState(null);
+    return result;
+  }, [readings, filterSlot, filterDate]);
 
-    // Fetch Existing Readings
-    useEffect(() => {
-        async function fetchReadings() {
-            try {
-                setLoading(true);
-                setError("");
+  // Quick statistics calculated from filtered or total readings
+  const summaryStats = useMemo(() => {
+    if (readings.length === 0) return null;
+    const values = readings.map((r) => Number(r.glucose_value)).filter(Boolean);
+    if (values.length === 0) return null;
+    const sum = values.reduce((a, b) => a + b, 0);
+    return {
+      count: values.length,
+      average: Math.round((sum / values.length) * 10) / 10,
+      highest: Math.max(...values),
+      lowest: Math.min(...values),
+    };
+  }, [readings]);
 
-                const response = await getReadings(token);
-                setReadings(response.data);
-            } catch (error) {
-                setError(error.message || "Unable to load readings.");
-            } finally {
-                setLoading(false);
+  // Pagination slices
+  const totalPages = Math.ceil(filteredReadings.length / PAGE_SIZE) || 1;
+  const paginatedReadings = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredReadings.slice(start, start + PAGE_SIZE);
+  }, [filteredReadings, currentPage]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterSlot, filterDate]);
+
+  function handleOpenAdd() {
+    setEditingReading(null);
+    setModalOpen(true);
+  }
+
+  function handleOpenEdit(reading) {
+    setEditingReading(reading);
+    setModalOpen(true);
+  }
+
+  function handleReadingSaved(savedReading, isEdit) {
+    setSuccessMessage(
+      isEdit
+        ? "Glucose reading updated successfully!"
+        : "Glucose reading logged successfully!"
+    );
+    setTimeout(() => setSuccessMessage(""), 4000);
+    fetchReadings();
+  }
+
+  function handleRequestDelete(reading) {
+    setReadingToDelete(reading);
+    setDeleteConfirmOpen(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!readingToDelete) return;
+    try {
+      setDeleting(true);
+      await deleteReading(readingToDelete.id, token);
+      setSuccessMessage("Glucose reading deleted successfully.");
+      setTimeout(() => setSuccessMessage(""), 4000);
+      setDeleteConfirmOpen(false);
+      setReadingToDelete(null);
+      fetchReadings();
+    } catch (err) {
+      setError(err.message || "Failed to delete reading.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  function handleResetFilters() {
+    setFilterSlot("ALL");
+    setFilterDate("");
+  }
+
+  return (
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200">
+      {/* Header with Title and Primary Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-[#0B1B4F] tracking-tight">
+            Blood Glucose Readings
+          </h2>
+          <p className="text-xs sm:text-sm text-[#556987] mt-1">
+            Log, inspect, and manage your full blood sugar measurement history
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {readings.length > 0 && (
+            <Button
+              variant="outline"
+              size="md"
+              onClick={() => exportReadingsToCSV(readings)}
+              icon={
+                <svg className="w-4 h-4 text-[#0A387E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              }
+              className="hidden sm:inline-flex"
+            >
+              Export CSV
+            </Button>
+          )}
+
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleOpenAdd}
+            icon={
+              <svg className="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
             }
-        }
+          >
+            Add Reading
+          </Button>
+        </div>
+      </div>
 
-        if (token) {
-            fetchReadings();
-        } else {
-            setLoading(false);
-        }
-    }, [token]);
+      {/* Success Notification Banner */}
+      {successMessage && (
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs sm:text-sm text-emerald-800 flex items-center justify-between gap-3 shadow-xs animate-in fade-in duration-150">
+          <div className="flex items-center gap-2.5">
+            <svg className="w-5 h-5 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-semibold">{successMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSuccessMessage("")}
+            className="text-emerald-700 hover:text-emerald-900"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
-    // Handle Form Changes
-    function handleFormChange(event) {
-        const { name, value } = event.target;
+      {/* Error Banner */}
+      {error && (
+        <ErrorState
+          title="Error loading readings"
+          message={error}
+          onRetry={fetchReadings}
+        />
+      )}
 
-        setFormData((previous) => ({
-            ...previous,
-            [name]: value,
-        }));
+      {/* Summary Statistics Strip */}
+      {summaryStats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white rounded-2xl border border-[#E2EBF4] p-4 shadow-xs">
+            <span className="text-[11px] font-semibold text-[#8598B0] uppercase tracking-wider">
+              Total Logged
+            </span>
+            <p className="text-xl sm:text-2xl font-extrabold text-[#0B1B4F] mt-1">
+              {summaryStats.count}
+            </p>
+          </div>
 
-        setFormError("");
-        setSuccessMessage("");
-    }
+          <div className="bg-white rounded-2xl border border-[#E2EBF4] p-4 shadow-xs">
+            <span className="text-[11px] font-semibold text-[#8598B0] uppercase tracking-wider">
+              Overall Average
+            </span>
+            <p className="text-xl sm:text-2xl font-extrabold text-[#0A387E] mt-1">
+              {summaryStats.average}{" "}
+              <span className="text-xs font-normal text-[#8598B0]">mg/dL</span>
+            </p>
+          </div>
 
-    // Validate Form Data
-    function validateForm() {
-        if (!formData.reading_date || !formData.glucose_value) {
-            setFormError("Please enter a date and glucose value.");
-            return false;
-        }
+          <div className="bg-white rounded-2xl border border-[#E2EBF4] p-4 shadow-xs">
+            <span className="text-[11px] font-semibold text-[#8598B0] uppercase tracking-wider">
+              Highest
+            </span>
+            <p className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1">
+              {summaryStats.highest}{" "}
+              <span className="text-xs font-normal text-[#8598B0]">mg/dL</span>
+            </p>
+          </div>
 
-        if (formData.reading_date > getTodayDate()) {
-            setFormError("Reading date cannot be in the future.");
-            return false;
-        }
+          <div className="bg-white rounded-2xl border border-[#E2EBF4] p-4 shadow-xs">
+            <span className="text-[11px] font-semibold text-[#8598B0] uppercase tracking-wider">
+              Lowest
+            </span>
+            <p className="text-xl sm:text-2xl font-extrabold text-[#09778F] mt-1">
+              {summaryStats.lowest}{" "}
+              <span className="text-xs font-normal text-[#8598B0]">mg/dL</span>
+            </p>
+          </div>
+        </div>
+      )}
 
-        const glucoseValue = Number(formData.glucose_value);
-
-        if (
-            !Number.isInteger(glucoseValue) ||
-            glucoseValue < 40 ||
-            glucoseValue > 600
-        ) {
-            setFormError("Value must be between 40 and 600 mg/dL.");
-            return false;
-        }
-
-        return true;
-    }
-
-    // Reset Form
-    function resetForm() {
-        setEditingId(null);
-
-        setFormData({
-            reading_date: getTodayDate(),
-            time_slot: "MORNING",
-            glucose_value: "",
-        });
-
-        setFormError("");
-    }
-
-    // Edit Existing Reading
-    function handleEdit(reading) {
-        setEditingId(reading.id);
-
-        setFormData({
-            reading_date: getReadingDate(reading.reading_date),
-            time_slot: reading.time_slot,
-            glucose_value: String(reading.glucose_value),
-        });
-
-        setFormError("");
-        setSuccessMessage("");
-
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth",
-        });
-    }
-
-    // Cancel Editing
-    function handleCancelEdit() {
-        resetForm();
-        setSuccessMessage("");
-    }
-
-    // Add New Reading
-    async function handleAddReading(event) {
-        event.preventDefault();
-
-        setFormError("");
-        setSuccessMessage("");
-
-        if (!validateForm()) {
-            return;
-        }
-
-        const glucoseValue = Number(formData.glucose_value);
-
-        try {
-            setSaving(true);
-
-            const response = await createReading(
-                {
-                    ...formData,
-                    glucose_value: glucoseValue,
-                },
-                token
-            );
-
-            setReadings((previous) => [
-                response.data,
-                ...previous,
-            ]);
-
-            resetForm();
-
-            setSuccessMessage(
-                "Glucose reading added successfully!"
-            );
-        } catch (error) {
-            setFormError(
-                error.message || "Unable to add reading."
-            );
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    // Update Existing Reading
-    async function handleUpdateReading(event) {
-        event.preventDefault();
-
-        setFormError("");
-        setSuccessMessage("");
-
-        if (!validateForm()) {
-            return;
-        }
-
-        const glucoseValue = Number(formData.glucose_value);
-
-        try {
-            setSaving(true);
-
-            const response = await updateReading(
-                editingId,
-                {
-                    ...formData,
-                    glucose_value: glucoseValue,
-                },
-                token
-            );
-
-            setReadings((previous) =>
-                previous.map((reading) =>
-                    String(reading.id) === String(editingId)
-                        ? response.data
-                        : reading
-                )
-            );
-
-            resetForm();
-
-            setSuccessMessage(
-                "Glucose reading updated successfully!"
-            );
-        } catch (error) {
-            setFormError(
-                error.message || "Unable to update reading."
-            );
-        } finally {
-            setSaving(false);
-        }
-    }
-
-    // Delete Existing Reading
-    async function handleDeleteReading(readingId) {
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this glucose reading?"
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            setError("");
-            setFormError("");
-            setSuccessMessage("");
-            setDeletingId(readingId);
-
-            await deleteReading(readingId, token);
-
-            setReadings((previous) =>
-                previous.filter(
-                    (reading) =>
-                        String(reading.id) !== String(readingId)
-                )
-            );
-
-            if (String(editingId) === String(readingId)) {
-                handleCancelEdit();
+      {/* Filter Toolbar Card */}
+      <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-[#E2EBF4] shadow-[0_10px_30px_rgba(10,56,126,0.05)] p-4 sm:p-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-end">
+          {/* Time Slot Filter */}
+          <Select
+            label="Filter by Time Slot"
+            id="filterSlot"
+            name="filterSlot"
+            value={filterSlot}
+            onChange={(e) => setFilterSlot(e.target.value)}
+            icon={
+              <svg className="w-4 h-4 text-[#0A387E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
             }
+          >
+            <option value="ALL">All Time Slots</option>
+            <option value="MORNING">Morning (Fasting)</option>
+            <option value="AFTER_BREAKFAST">After Breakfast</option>
+            <option value="AFTER_LUNCH">After Lunch</option>
+            <option value="AFTER_DINNER">After Dinner</option>
+          </Select>
 
-            setSuccessMessage(
-                "Glucose reading deleted successfully!"
-            );
-        } catch (error) {
-            setError(
-                error.message || "Unable to delete reading."
-            );
-        } finally {
-            setDeletingId(null);
-        }
-    }
+          {/* Date Filter */}
+          <Input
+            label="Filter by Date"
+            id="filterDate"
+            name="filterDate"
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+          />
 
-    return (
-        <div className="min-h-screen bg-slate-50">
+          {/* Reset Action */}
+          <div className="flex items-center gap-2">
+            {(filterSlot !== "ALL" || filterDate) && (
+              <Button
+                variant="outline"
+                size="md"
+                onClick={handleResetFilters}
+                className="w-full text-xs"
+              >
+                Clear Filters
+              </Button>
+            )}
+            <div className="text-xs text-[#8598B0] font-medium ml-auto sm:ml-0 self-center">
+              Found:{" "}
+              <span className="font-bold text-[#0B1B4F]">
+                {filteredReadings.length}
+              </span>{" "}
+              record{filteredReadings.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Navigation */}
-            <nav className="bg-white border-b border-slate-200">
-                <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
+      {/* Main Table / Card Content */}
+      <div className="bg-white rounded-[28px] sm:rounded-[32px] border border-[#E2EBF4] shadow-[0_10px_30px_rgba(10,56,126,0.05)] p-5 sm:p-7">
+        {loading ? (
+          <LoadingSpinner message="Retrieving glucose readings..." />
+        ) : filteredReadings.length === 0 ? (
+          <EmptyState
+            title={
+              filterSlot !== "ALL" || filterDate
+                ? "No matching readings found"
+                : "No readings logged yet"
+            }
+            description={
+              filterSlot !== "ALL" || filterDate
+                ? "Try clearing the active filters to see all recorded entries."
+                : "Start monitoring your diabetes or health goals by recording your blood glucose."
+            }
+            actionLabel={
+              filterSlot !== "ALL" || filterDate
+                ? "Clear Filters"
+                : "Log First Reading"
+            }
+            onAction={
+              filterSlot !== "ALL" || filterDate
+                ? handleResetFilters
+                : handleOpenAdd
+            }
+          />
+        ) : (
+          <div className="space-y-4">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-[#EEF4FA] text-[11px] font-bold text-[#8598B0] uppercase tracking-wider">
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Time Slot</th>
+                    <th className="py-3 px-4">Glucose Level</th>
+                    <th className="py-3 px-4">Classification</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#EEF4FA]">
+                  {paginatedReadings.map((reading) => {
+                    const status = getGlucoseStatus(
+                      reading.glucose_value,
+                      reading.time_slot
+                    );
+                    return (
+                      <tr
+                        key={reading.id}
+                        className="hover:bg-[#F8FBFE] transition-colors group"
+                      >
+                        {/* Date */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className="text-sm font-bold text-[#0B1B4F]">
+                            {formatDate(reading.reading_date, {
+                              includeWeekday: true,
+                            })}
+                          </span>
+                        </td>
 
-                    <Link
-                        to="/dashboard"
-                        className="text-2xl font-bold text-emerald-700"
-                    >
-                        ♥ Sweety
-                    </Link>
-
-                    <button
-                        onClick={logout}
-                        className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                    >
-                        Logout
-                    </button>
-
-                </div>
-            </nav>
-
-            {/* Page Content */}
-            <main className="max-w-7xl mx-auto px-5 py-10">
-
-                {/* Page Heading */}
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-
-                    <div>
-                        <h2 className="text-3xl font-bold text-slate-800">
-                            Glucose Readings
-                        </h2>
-
-                        <p className="text-slate-500 mt-2">
-                            View and manage your glucose history.
-                        </p>
-                    </div>
-
-                    <Link
-                        to="/dashboard"
-                        className="rounded-xl border border-emerald-200 px-5 py-3 text-emerald-700 font-medium hover:bg-emerald-50"
-                    >
-                        Back to Dashboard
-                    </Link>
-
-                </div>
-
-                {/* Add / Edit Reading Form */}
-                <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-8">
-
-                    <div className="flex items-center justify-between mb-6">
-
-                        <h3 className="text-xl font-semibold text-slate-800">
-                            {editingId
-                                ? "Edit Glucose Reading"
-                                : "Add Glucose Reading"}
-                        </h3>
-
-                        {editingId && (
-                            <span className="text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
-                                Editing
-                            </span>
-                        )}
-
-                    </div>
-
-                    <form
-                        onSubmit={
-                            editingId
-                                ? handleUpdateReading
-                                : handleAddReading
-                        }
-                        className="grid grid-cols-1 md:grid-cols-3 gap-5"
-                    >
-
-                        {/* Reading Date */}
-                        <div>
-                            <label
-                                htmlFor="reading_date"
-                                className="block text-sm font-medium text-slate-700 mb-2"
-                            >
-                                Reading Date
-                            </label>
-
-                            <input
-                                id="reading_date"
-                                type="date"
-                                name="reading_date"
-                                value={formData.reading_date}
-                                onChange={handleFormChange}
-                                max={getTodayDate()}
-                                required
-                                className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                            />
-                        </div>
-
-                        {/* Time Slot */}
-                        <div>
-                            <label
-                                htmlFor="time_slot"
-                                className="block text-sm font-medium text-slate-700 mb-2"
-                            >
-                                Time Slot
-                            </label>
-
-                            <select
-                                id="time_slot"
-                                name="time_slot"
-                                value={formData.time_slot}
-                                onChange={handleFormChange}
-                                className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                            >
-                                <option value="MORNING">
-                                    Morning (Fasting)
-                                </option>
-
-                                <option value="AFTER_BREAKFAST">
-                                    After breakfast
-                                </option>
-
-                                <option value="AFTER_LUNCH">
-                                    After lunch
-                                </option>
-
-                                <option value="AFTER_DINNER">
-                                    After dinner
-                                </option>
-                            </select>
-                        </div>
+                        {/* Slot */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-2 text-sm text-[#334155]">
+                            <span className="w-2 h-2 rounded-full bg-[#0A387E]/30" />
+                            {SLOT_LABELS[reading.time_slot] || reading.time_slot}
+                          </span>
+                        </td>
 
                         {/* Glucose Value */}
-                        <div>
-                            <label
-                                htmlFor="glucose_value"
-                                className="block text-sm font-medium text-slate-700 mb-2"
-                            >
-                                Glucose Value (mg/dL)
-                            </label>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span className="text-base font-extrabold text-[#0A387E]">
+                            {reading.glucose_value}
+                          </span>
+                          <span className="text-xs text-[#8598B0] ml-1.5 font-medium">
+                            mg/dL
+                          </span>
+                        </td>
 
-                            <input
-                                id="glucose_value"
-                                type="number"
-                                name="glucose_value"
-                                min="40"
-                                max="600"
-                                step="1"
-                                placeholder="e.g. 120"
-                                value={formData.glucose_value}
-                                onChange={handleFormChange}
-                                required
-                                className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                        {/* Status Badge */}
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${status.badgeClass}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${status.dotClass}`}
                             />
-                        </div>
+                            {status.label}
+                          </span>
+                        </td>
 
-                        {/* Form Error */}
-                        {formError && (
-                            <div
-                                role="alert"
-                                className="md:col-span-3 rounded-lg bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600"
-                            >
-                                {formError}
-                            </div>
-                        )}
-
-                        {/* Success Message */}
-                        {successMessage && (
-                            <div
-                                role="status"
-                                className="md:col-span-3 rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700"
-                            >
-                                {successMessage}
-                            </div>
-                        )}
-
-                        {/* Form Buttons */}
-                        <div className="md:col-span-3 flex flex-wrap gap-3">
-
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
-                                type="submit"
-                                disabled={saving || deletingId !== null}
-                                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold px-6 py-3 transition"
+                              type="button"
+                              onClick={() => handleOpenEdit(reading)}
+                              className="p-1.5 rounded-xl text-[#556987] hover:text-[#0A387E] hover:bg-[#EAF4FE] transition-colors cursor-pointer"
+                              title="Edit Reading"
                             >
-                                {saving
-                                    ? "Saving..."
-                                    : editingId
-                                        ? "Update Reading"
-                                        : "+ Add Reading"}
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
                             </button>
 
-                            {editingId && (
-                                <button
-                                    type="button"
-                                    onClick={handleCancelEdit}
-                                    disabled={saving || deletingId !== null}
-                                    className="rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold px-6 py-3 transition"
-                                >
-                                    Cancel
-                                </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRequestDelete(reading)}
+                              className="p-1.5 rounded-xl text-[#556987] hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Delete Reading"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                        </div>
-
-                    </form>
-                </section>
-
-                {/* Readings List */}
-                <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-
-                    <div className="flex items-center justify-between mb-6">
-
-                        <h3 className="text-xl font-semibold text-slate-800">
-                            All Readings
-                        </h3>
-
-                        <span className="text-sm text-slate-500">
-                            {readings.length} records
-                        </span>
-
+            {/* Mobile Cards View */}
+            <div className="md:hidden space-y-3">
+              {paginatedReadings.map((reading) => {
+                const status = getGlucoseStatus(
+                  reading.glucose_value,
+                  reading.time_slot
+                );
+                return (
+                  <div
+                    key={reading.id}
+                    className="p-4 rounded-2xl border border-[#E2EBF4] bg-[#FAFDFE] shadow-xs space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold text-[#0B1B4F]">
+                          {formatDate(reading.reading_date, {
+                            includeWeekday: true,
+                          })}
+                        </p>
+                        <p className="text-xs text-[#556987] mt-0.5">
+                          {SLOT_SHORT_LABELS[reading.time_slot] ||
+                            reading.time_slot}
+                        </p>
+                      </div>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold ${status.badgeClass}`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${status.dotClass}`}
+                        />
+                        {status.label}
+                      </span>
                     </div>
 
-                    {/* Delete Error */}
-                    {error && !loading && (
-                        <div className="rounded-xl bg-red-50 border border-red-100 p-4 mb-5 text-red-600">
-                            {error}
-                        </div>
-                    )}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#EEF4FA]">
+                      <div>
+                        <span className="text-xl font-extrabold text-[#0A387E]">
+                          {reading.glucose_value}
+                        </span>
+                        <span className="text-xs text-[#8598B0] ml-1">
+                          mg/dL
+                        </span>
+                      </div>
 
-                    {loading ? (
-                        <p className="text-slate-500 py-8 text-center">
-                            Loading your readings...
-                        </p>
-                    ) : readings.length === 0 ? (
-                        <div className="text-center py-12">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEdit(reading)}
+                          className="h-8 px-3 text-xs"
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="dangerOutline"
+                          size="sm"
+                          onClick={() => handleRequestDelete(reading)}
+                          className="h-8 px-3 text-xs"
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
-                            <p className="text-lg font-medium text-slate-700">
-                                No readings yet
-                            </p>
+            {/* Pagination Controls */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredReadings.length}
+              pageSize={PAGE_SIZE}
+            />
+          </div>
+        )}
+      </div>
 
-                            <p className="text-sm text-slate-500 mt-2">
-                                Your glucose readings will appear here.
-                            </p>
+      {/* Add / Edit Reading Modal */}
+      <ReadingModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        initialData={editingReading}
+        onSaved={handleReadingSaved}
+      />
 
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-
-                            <table className="w-full text-left">
-
-                                <thead>
-                                    <tr className="border-b border-slate-200 text-sm text-slate-500">
-
-                                        <th className="py-4 pr-4 font-medium">
-                                            Date
-                                        </th>
-
-                                        <th className="py-4 pr-4 font-medium">
-                                            Time Slot
-                                        </th>
-
-                                        <th className="py-4 pr-4 font-medium">
-                                            Glucose Value
-                                        </th>
-
-                                        <th className="py-4 pr-4 font-medium">
-                                            Action
-                                        </th>
-
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {readings.map((reading) => (
-                                        <tr
-                                            key={reading.id}
-                                            className="border-b border-slate-100 last:border-0"
-                                        >
-
-                                            <td className="py-4 pr-4 text-slate-700 whitespace-nowrap">
-                                                {formatDate(reading.reading_date)}
-                                            </td>
-
-                                            <td className="py-4 pr-4 text-slate-700 whitespace-nowrap">
-                                                {SLOT_LABELS[reading.time_slot] ||
-                                                    reading.time_slot}
-                                            </td>
-
-                                            <td className="py-4 pr-4">
-                                                <span className="font-semibold text-emerald-700 whitespace-nowrap">
-                                                    {reading.glucose_value} mg/dL
-                                                </span>
-                                            </td>
-
-                                            {/* Actions */}
-                                            <td className="py-4 pr-4">
-
-                                                <div className="flex items-center gap-2">
-
-                                                    {/* Edit Button */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleEdit(reading)}
-                                                        disabled={
-                                                            saving ||
-                                                            deletingId !== null
-                                                        }
-                                                        className="rounded-lg border border-emerald-200 px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 transition"
-                                                    >
-                                                        Edit
-                                                    </button>
-
-                                                    {/* Delete Button */}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            handleDeleteReading(reading.id)
-                                                        }
-                                                        disabled={
-                                                            saving ||
-                                                            deletingId !== null
-                                                        }
-                                                        className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition"
-                                                    >
-                                                        {String(deletingId) === String(reading.id)
-                                                            ? "Deleting..."
-                                                            : "Delete"}
-                                                    </button>
-
-                                                </div>
-
-                                            </td>
-
-                                        </tr>
-                                    ))}
-                                </tbody>
-
-                            </table>
-
-                        </div>
-                    )}
-
-                </section>
-
-            </main>
-
-        </div>
-    );
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        loading={deleting}
+        title="Delete Glucose Reading?"
+        message={`Are you sure you want to delete the ${readingToDelete?.glucose_value} mg/dL reading for ${
+          readingToDelete ? formatDate(readingToDelete.reading_date) : ""
+        }? This action cannot be undone.`}
+        confirmText="Delete Reading"
+      />
+    </div>
+  );
 }
-
-export default Readings;

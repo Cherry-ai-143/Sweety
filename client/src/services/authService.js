@@ -25,3 +25,13 @@ export async function getCurrentUser(token) {
         },
     });
 }
+
+// Permanently delete the user's account and all data
+export async function deleteAccount(token) {
+    return apiRequest("/auth/me", {
+        method: "DELETE",
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
+}

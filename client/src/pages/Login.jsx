@@ -60,96 +60,121 @@ function Login() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative bg-[#EAF4FE] flex items-center justify-center selection:bg-[#0A387E] selection:text-white">
-      {/* Desktop Background Template: fits 100% within viewport without any cropping */}
-      <img
-        src="/images/login-bg-with-logo.png"
-        alt="Sweety Health Background Template"
-        className="hidden lg:block absolute inset-0 w-full h-full object-fill pointer-events-none select-none z-0"
-      />
-
-      {/* Mobile/Tablet Background */}
-      <div
-        className="block lg:hidden absolute inset-0 w-full h-full bg-cover bg-center pointer-events-none select-none z-0 opacity-30"
-        style={{ backgroundImage: "url('/images/login-bg-with-logo.png')" }}
-      />
-
-      {/* Viewport Content Wrapper */}
-      <div className="relative z-10 w-full h-full flex flex-col lg:flex-row items-center justify-center lg:justify-end px-4 sm:px-6 lg:pr-[3.5%] xl:pr-[4.5%] overflow-y-auto lg:overflow-hidden py-6 lg:py-0">
+    <div className="min-h-screen w-full bg-[#EAF4FF] flex items-center justify-center p-4 sm:p-6 lg:p-8 selection:bg-[#103F82] selection:text-white">
+      {/* Main Centered White Container (occupying ~72-78% on desktop) */}
+      <div className="w-full max-w-[1020px] xl:max-w-[1080px] bg-white rounded-[36px] sm:rounded-[44px] lg:rounded-[48px] shadow-[0_20px_60px_rgba(16,63,130,0.07)] border border-[#E2EEF8]/60 p-6 sm:p-9 lg:p-11 xl:p-12 relative flex flex-col lg:flex-row items-center lg:items-stretch justify-between gap-8 lg:gap-10">
         
-        {/* Mobile-only Brand Header (Hidden on Desktop) */}
-        <div className="w-full max-w-[440px] mb-5 flex flex-col items-center text-center lg:hidden">
-          <img
-            src="/images/sweety-logo-cropped.png"
-            alt="Sweety Logo"
-            className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm mb-1.5"
-          />
-          <p className="text-xs font-medium text-slate-500 tracking-wide">
-            Track • Monitor • Live Healthy
-          </p>
-        </div>
-
-        {/* Login Form Card */}
-        <div className="w-full max-w-[420px] sm:max-w-[440px] xl:max-w-[450px] bg-white rounded-[32px] sm:rounded-[36px] shadow-[0_20px_50px_rgba(10,56,126,0.12)] border border-[#E2EBF4] px-6 sm:px-9 py-6 sm:py-7 my-auto transition-all flex flex-col justify-between">
-          
+        {/* Left Panel – Sweety branding and glucose illustration (~55%) */}
+        <div className="w-full lg:w-[54%] flex flex-col justify-between py-1 lg:py-2">
           <div>
-            {/* Heartbeat pulse icon with flanking dividers */}
-            <div className="flex items-center justify-center gap-3.5 mb-2.5">
-              <div className="h-[1.5px] w-12 sm:w-16 bg-[#B9D8EC]" />
-              <div className="w-8 h-8 flex items-center justify-center text-[#09778F]">
-                <svg
-                  className="w-7 h-7"
-                  viewBox="0 0 28 28"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* Heart Base */}
-                  <path
-                    d="M14 24.5C14 24.5 2.5 17.8 2.5 9.8C2.5 5.6 5.8 2.3 9.9 2.3C12.1 2.3 13.2 3.4 14 4.3C14.8 3.4 15.9 2.3 18.1 2.3C22.2 2.3 25.5 5.6 25.5 9.8C25.5 17.8 14 24.5 14 24.5Z"
-                    fill="#0B798F"
-                  />
-                  {/* Heartbeat Pulse Line */}
-                  <path
-                    d="M6 11.5H10.2L11.8 8L14 15L16.2 9.5L17.8 11.5H22"
-                    stroke="#FFFFFF"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-              <div className="h-[1.5px] w-12 sm:w-16 bg-[#B9D8EC]" />
+            {/* Main Heading */}
+            <h1 className="text-3xl sm:text-4xl lg:text-[38px] xl:text-[42px] font-extrabold text-[#092F65] leading-[1.18] tracking-tight">
+              Take Control of<br />
+              Your Health,<br />
+              <span className="text-[#FF9800]">One Reading</span> at a Time.
+            </h1>
+
+            {/* Supporting Description */}
+            <p className="text-[#687F9F] text-sm sm:text-[15px] mt-3 font-normal max-w-[430px] leading-relaxed">
+              Track your blood glucose, monitor your progress and live healthier with Sweety.
+            </p>
+          </div>
+
+          {/* Glucose Reading Illustration & Tagline */}
+          <div className="mt-6 sm:mt-8 flex flex-col items-center lg:items-start">
+            <div className="w-full max-w-[440px] rounded-[24px] sm:rounded-[28px] overflow-hidden shadow-[0_8px_25px_rgba(16,63,130,0.07)] border border-[#E2EEF8]/80 bg-[#F4F9FD]">
+              <img
+                src="/images/glucose-reading.png"
+                alt="Blood glucose monitoring reading 98 mg/dL"
+                className="w-full h-[180px] sm:h-[210px] lg:h-[220px] object-cover"
+              />
             </div>
 
-            {/* Heading */}
-            <h1 className="text-[25px] sm:text-[27px] font-extrabold text-[#0B1B4F] text-center tracking-tight leading-tight">
+            {/* Tagline Pill below image */}
+            <div className="w-full max-w-[440px] flex justify-center mt-3.5">
+              <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-1.5 shadow-[0_4px_16px_rgba(16,63,130,0.08)] border border-[#E2EEF8] text-xs sm:text-[12.5px] font-semibold text-[#092F65]">
+                <div className="w-4 h-4 rounded-full bg-[#07869A] flex items-center justify-center text-white shrink-0">
+                  <svg
+                    className="w-2.5 h-2.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 12h3.5l2-4 3.5 8 2.5-5 1.5 2H21"
+                    />
+                  </svg>
+                </div>
+                <span>Healthy Today. Happier Tomorrow.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel – Sweety login card (~45%) */}
+        <div className="w-full lg:w-[46%] max-w-[420px] bg-white rounded-[28px] sm:rounded-[32px] border border-[#E2EEF8] shadow-[0_12px_40px_rgba(16,63,130,0.06)] px-6 sm:px-7 py-6 sm:py-7 flex flex-col justify-between">
+          <div>
+            {/* Sweety Official Logo Asset */}
+            <div className="flex justify-center mb-1">
+              <img
+                src="/images/sweety-logo-cropped.png"
+                alt="Sweety Logo"
+                className="h-11 sm:h-12 w-auto object-contain"
+              />
+            </div>
+
+            {/* Welcome Heading */}
+            <h2 className="text-[21px] sm:text-[23px] font-extrabold text-[#092F65] text-center tracking-tight leading-tight">
               Welcome Back!
-            </h1>
-            <p className="text-[13px] sm:text-[13.5px] text-[#556987] text-center mt-1 mb-4 font-normal">
+            </h2>
+            <p className="text-[12px] sm:text-[12.5px] text-[#687F9F] text-center mt-0.5 mb-3.5 font-normal">
               Login to your Sweety account
             </p>
 
-            {/* Error Message */}
+            {/* Error Alert */}
             {error && (
               <div
                 role="alert"
-                className="mb-3.5 rounded-2xl bg-red-50 border border-red-200 px-3.5 py-2 text-xs sm:text-sm text-red-600 flex items-start gap-2"
+                className="mb-3 rounded-2xl bg-red-50 border border-red-200 px-3.5 py-2 text-xs text-red-600 flex items-start gap-2"
               >
-                <svg className="w-4 h-4 mt-0.5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <svg
+                  className="w-4 h-4 mt-0.5 shrink-0 text-red-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
                 </svg>
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Form */}
+            {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-3">
-              
-              {/* Email Field - Clean White Background */}
-              <div className="relative flex items-center rounded-2xl border border-[#D3DFEB] bg-white px-4 h-[46px] sm:h-[48px] transition focus-within:border-[#0A3D8F] focus-within:ring-4 focus-within:ring-[#0A3D8F]/10">
-                <span className="text-[#475A77] mr-3 shrink-0">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              {/* Email Field */}
+              <div className="relative flex items-center rounded-2xl border border-[#D1E0F2] bg-white px-3.5 h-[44px] sm:h-[46px] transition focus-within:border-[#103F82] focus-within:ring-3 focus-within:ring-[#103F82]/10">
+                <span className="text-[#687F9F] mr-2.5 shrink-0">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                  >
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 7l9 6 9-6"
+                    />
                   </svg>
                 </span>
                 <input
@@ -162,15 +187,26 @@ function Login() {
                   autoComplete="email"
                   required
                   style={{ backgroundColor: "transparent" }}
-                  className="w-full bg-transparent text-[14px] text-[#0F172A] placeholder-[#5C6E88] outline-none font-normal"
+                  className="w-full bg-transparent text-[13.5px] text-[#0F172A] placeholder-[#8A9EB5] outline-none font-normal"
                 />
               </div>
 
-              {/* Password Field - Clean White Background */}
-              <div className="relative flex items-center rounded-2xl border border-[#D3DFEB] bg-white px-4 h-[46px] sm:h-[48px] transition focus-within:border-[#0A3D8F] focus-within:ring-4 focus-within:ring-[#0A3D8F]/10">
-                <span className="text-[#475A77] mr-3 shrink-0">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              {/* Password Field */}
+              <div className="relative flex items-center rounded-2xl border border-[#D1E0F2] bg-white px-3.5 h-[44px] sm:h-[46px] transition focus-within:border-[#103F82] focus-within:ring-3 focus-within:ring-[#103F82]/10">
+                <span className="text-[#687F9F] mr-2.5 shrink-0">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                  >
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M8 11V7a4 4 0 018 0v4"
+                    />
                   </svg>
                 </span>
                 <input
@@ -183,18 +219,17 @@ function Login() {
                   autoComplete="current-password"
                   required
                   style={{ backgroundColor: "transparent" }}
-                  className="w-full bg-transparent text-[14px] text-[#0F172A] placeholder-[#5C6E88] outline-none font-normal pr-2"
+                  className="w-full bg-transparent text-[13.5px] text-[#0F172A] placeholder-[#8A9EB5] outline-none font-normal pr-2"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="text-[#556987] hover:text-[#0B1B4F] transition-colors p-1 shrink-0 focus:outline-none cursor-pointer"
+                  className="text-[#687F9F] hover:text-[#092F65] transition-colors p-1 shrink-0 focus:outline-none cursor-pointer"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    /* Correct Eye Open Symbol */
                     <svg
-                      className="w-5 h-5 text-[#556987] hover:text-[#0B1B4F] transition-colors"
+                      className="w-4 h-4"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -206,9 +241,8 @@ function Login() {
                       <circle cx="12" cy="12" r="3" />
                     </svg>
                   ) : (
-                    /* Correct Eye-Off Slashed Symbol Matching Screenshot */
                     <svg
-                      className="w-5 h-5 text-[#556987] hover:text-[#0B1B4F] transition-colors"
+                      className="w-4 h-4"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -224,22 +258,22 @@ function Login() {
               </div>
 
               {/* Remember Me & Forgot Password */}
-              <div className="flex items-center justify-between text-[13px] pt-0.5 pb-0.5">
-                <label className="inline-flex items-center gap-2 cursor-pointer select-none group">
+              <div className="flex items-center justify-between text-[12px] sm:text-[12.5px] pt-0.5">
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded-[4px] border-[#CBD5E1] text-[#0A387E] focus:ring-[#0A387E] cursor-pointer"
+                    className="w-3.5 h-3.5 rounded-[4px] border-[#CBD5E1] text-[#103F82] focus:ring-[#103F82] cursor-pointer"
                   />
-                  <span className="text-[#334155] font-normal group-hover:text-[#0B1B4F] transition-colors">
+                  <span className="text-[#556987] font-normal hover:text-[#092F65] transition-colors">
                     Remember me
                   </span>
                 </label>
 
                 <Link
                   to="/forgot-password"
-                  className="text-[#0960BD] hover:text-[#064287] font-medium transition-colors"
+                  className="text-[#103F82] hover:text-[#082F67] font-semibold transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -249,7 +283,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full h-[46px] sm:h-[48px] rounded-full bg-[#0A387E] hover:bg-[#072B63] active:scale-[0.99] text-white font-semibold text-[15.5px] sm:text-[16px] tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-[#0A387E]/25 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer mt-1"
+                className="w-full h-[44px] sm:h-[46px] rounded-full bg-[#103F82] hover:bg-[#082F67] active:scale-[0.99] text-white font-semibold text-[14.5px] sm:text-[15px] tracking-wide flex items-center justify-center gap-1.5 shadow-md shadow-[#103F82]/20 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer mt-1"
               >
                 <span>{loading ? "Signing in..." : "Login"}</span>
                 {!loading && (
@@ -270,68 +304,71 @@ function Login() {
             </form>
           </div>
 
-          {/* Health Journey Feature Card (Compact Size) */}
-          <div className="mt-3 mb-1 rounded-[16px] bg-[#EAF7FF] border border-[#D5E8F8] px-3 py-2 sm:py-2.5">
+          {/* Health Journey Starts Here Compact Section */}
+          <div className="mt-3.5 rounded-[18px] bg-[#EAF6FF] border border-[#D5E8F8] px-3 py-2.5">
             {/* Header with Shield Icon */}
-            <div className="flex items-center justify-center gap-2 mb-1.5">
-              <div className="h-[1px] bg-[#BFD9EE] flex-1" />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z"
-                    fill="#0B58C7"
-                  />
-                  <path
-                    d="M12 7.5c-1.2 0-2 .8-2 2 0 1.5 2 3.5 2 3.5s2-2 2-3.5c0-1.2-.8-2-2-2z"
-                    fill="#FFFFFF"
-                  />
-                </svg>
-                <span className="font-bold text-[11px] sm:text-[11.5px] text-[#0B1B4F]">
-                  Your Health Journey Starts Here
-                </span>
-              </div>
-              <div className="h-[1px] bg-[#BFD9EE] flex-1" />
+            <div className="flex items-center justify-center gap-1.5 mb-2">
+              <svg
+                className="w-3.5 h-3.5 text-[#103F82]"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3z" />
+              </svg>
+              <span className="font-bold text-[11px] sm:text-[11.5px] text-[#092F65]">
+                Your Health Journey Starts Here
+              </span>
             </div>
 
             {/* 3 Equal Columns */}
-            <div className="grid grid-cols-3 divide-x divide-[#BFD9EE] my-0.5 text-center">
-              
+            <div className="grid grid-cols-3 divide-x divide-[#D5E8F8] text-center">
               {/* Daily Tracking */}
-              <div className="px-0.5 flex flex-col items-center">
-                <svg className="w-4 h-4 text-[#1565C0] mb-0.5" viewBox="0 0 24 24" fill="currentColor">
+              <div className="px-1 flex flex-col items-center">
+                <svg
+                  className="w-4 h-4 text-[#103F82] mb-1"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" />
                 </svg>
-                <span className="font-bold text-[10px] sm:text-[10.5px] text-[#0B1B4F] leading-tight">
+                <span className="font-bold text-[10px] text-[#092F65] leading-tight">
                   Daily<br />Tracking
                 </span>
               </div>
 
               {/* Health Reports */}
-              <div className="px-0.5 flex flex-col items-center">
-                <svg className="w-4 h-4 text-[#1565C0] mb-0.5" viewBox="0 0 24 24" fill="currentColor">
+              <div className="px-1 flex flex-col items-center">
+                <svg
+                  className="w-4 h-4 text-[#103F82] mb-1"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <rect x="4" y="14" width="3.5" height="7" rx="1" />
                   <rect x="10.25" y="9" width="3.5" height="12" rx="1" />
                   <rect x="16.5" y="4" width="3.5" height="17" rx="1" />
                 </svg>
-                <span className="font-bold text-[10px] sm:text-[10.5px] text-[#0B1B4F] leading-tight">
+                <span className="font-bold text-[10px] text-[#092F65] leading-tight">
                   Health<br />Reports
                 </span>
               </div>
 
               {/* Monthly History */}
-              <div className="px-0.5 flex flex-col items-center">
-                <svg className="w-4 h-4 text-[#1565C0] mb-0.5" viewBox="0 0 24 24" fill="currentColor">
+              <div className="px-1 flex flex-col items-center">
+                <svg
+                  className="w-4 h-4 text-[#103F82] mb-1"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
                   <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
                 </svg>
-                <span className="font-bold text-[10px] sm:text-[10.5px] text-[#0B1B4F] leading-tight">
+                <span className="font-bold text-[10px] text-[#092F65] leading-tight">
                   Monthly<br />History
                 </span>
               </div>
-
             </div>
 
             {/* Bottom Quote with lines */}
-            <div className="flex items-center justify-center mt-1.5 pt-0.5">
+            <div className="flex items-center justify-center mt-2 pt-1 border-t border-[#D5E8F8]/60">
               <div className="h-[1px] bg-[#BFD9EE] flex-1 max-w-[20px] sm:max-w-[28px]" />
               <span className="italic text-[9.5px] sm:text-[10px] text-[#1E3A5F] font-medium mx-2 whitespace-nowrap">
                 Every reading matters. Every day counts. <span className="not-italic">❤️</span>
@@ -340,20 +377,20 @@ function Login() {
             </div>
           </div>
 
-          {/* Sign Up Footer */}
-          <div className="mt-2 text-center">
-            <p className="text-[13px] sm:text-[13.5px] text-[#475569]">
+          {/* Don't have an account? Sign up */}
+          <div className="mt-3 text-center">
+            <p className="text-[12px] sm:text-[12.5px] text-[#556987]">
               Don’t have an account?{" "}
               <Link
                 to="/register"
-                className="text-[#0B58C7] hover:text-[#073F91] font-semibold hover:underline ml-1"
+                className="text-[#103F82] hover:text-[#082F67] font-semibold hover:underline ml-0.5"
               >
                 Sign up
               </Link>
             </p>
           </div>
-
         </div>
+
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import {
     loginUser,
     registerUser,
     getCurrentUser,
+    deleteAccount as deleteAccountApi,
 } from "../services/authService";
 
 const AuthContext = createContext(null);
@@ -30,8 +31,8 @@ export function AuthProvider({ children }) {
 
             try {
                 const response = await getCurrentUser(token);
-                setUser(response.data);
-            } catch (error) {
+                setUser(response.data?.user || response.data);
+            } catch {
                 localStorage.removeItem("sweety_token");
                 setToken(null);
                 setUser(null);
@@ -83,6 +84,13 @@ export function AuthProvider({ children }) {
         setUser(null);
     }
 
+    // Permanently delete current user account
+    async function deleteUserAccount() {
+        if (!token) return;
+        await deleteAccountApi(token);
+        logout();
+    }
+
     const value = {
         user,
         token,
@@ -90,6 +98,7 @@ export function AuthProvider({ children }) {
         register,
         login,
         logout,
+        deleteUserAccount,
         isAuthenticated: Boolean(token && user),
     };
 
