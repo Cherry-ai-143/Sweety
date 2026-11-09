@@ -82,7 +82,6 @@ async function getUserById(userId) {
     return result.rows[0] || null;
 }
 
-
 module.exports = {
     registerUser,
     loginUser,

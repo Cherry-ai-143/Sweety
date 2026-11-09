@@ -15,7 +15,7 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 
-// Protected route
+// Protected routes
 router.get("/me", authMiddleware, getMe);
 
 module.exports = router;
