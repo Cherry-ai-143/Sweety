@@ -142,32 +142,3 @@ export function getGlucoseStatus(value, slot = "MORNING") {
   }
 }
 
-// Export readings as a downloadable CSV
-export function exportReadingsToCSV(readings = [], filename = "sweety-glucose-readings.csv") {
-  if (!readings || readings.length === 0) return;
-
-  const headers = ["Reading Date", "Time Slot", "Glucose Value (mg/dL)", "Status", "Created At"];
-  const rows = readings.map((r) => {
-    const status = getGlucoseStatus(r.glucose_value, r.time_slot);
-    return [
-      `"${toDateInputValue(r.reading_date)}"`,
-      `"${SLOT_LABELS[r.time_slot] || r.time_slot}"`,
-      r.glucose_value,
-      `"${status.label}"`,
-      `"${r.created_at || ""}"`,
-    ];
-  });
-
-  const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-

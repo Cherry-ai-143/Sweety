@@ -11,7 +11,6 @@ import {
   SLOT_LABELS,
   SLOT_SHORT_LABELS,
   getGlucoseStatus,
-  exportReadingsToCSV,
 } from "../utils/glucoseUtils";
 import Button from "../components/common/Button";
 import Input from "../components/common/Input";
@@ -178,22 +177,6 @@ export default function Readings() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          {readings.length > 0 && (
-            <Button
-              variant="outline"
-              size="md"
-              onClick={() => exportReadingsToCSV(readings)}
-              icon={
-                <svg className="w-4 h-4 text-[#0A387E]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-              }
-              className="hidden sm:inline-flex"
-            >
-              Export CSV
-            </Button>
-          )}
-
           <Button
             variant="primary"
             size="md"

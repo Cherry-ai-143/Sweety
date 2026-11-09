@@ -38,6 +38,24 @@ function getPreviousMonthRange(selectedDate) {
     };
 }
 
+// Calculate the selected calendar month's date range (1st to last day of that month).
+function getSpecificMonthRange(selectedDate) {
+    const [year, month] = selectedDate.split("-").map(Number);
+
+    const startDate = formatDate(
+        new Date(Date.UTC(year, month - 1, 1))
+    );
+
+    const endDate = formatDate(
+        new Date(Date.UTC(year, month, 0))
+    );
+
+    return {
+        startDate,
+        endDate,
+    };
+}
+
 // Fetch readings and calculate report statistics.
 async function generateReport(userId, startDate, endDate) {
     // Calculate statistics.
@@ -116,10 +134,12 @@ async function getMonthToDateReport(userId, selectedDate) {
     );
 }
 
-// Previous monthly report.
-async function getMonthlyReport(userId, selectedDate) {
+// Monthly report (supports mode 'selected' for month-wise or 'previous').
+async function getMonthlyReport(userId, selectedDate, mode = "selected") {
     const { startDate, endDate } =
-        getPreviousMonthRange(selectedDate);
+        mode === "previous"
+            ? getPreviousMonthRange(selectedDate)
+            : getSpecificMonthRange(selectedDate);
 
     return generateReport(
         userId,

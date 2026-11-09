@@ -8,6 +8,7 @@ import {
   SLOT_LABELS,
   getGlucoseStatus,
 } from "../utils/glucoseUtils";
+import { downloadGlucoseReportPDF } from "../utils/pdfGenerator";
 import StatCard from "../components/dashboard/StatCard";
 import DailyGlucoseChart from "../components/charts/DailyGlucoseChart";
 import Button from "../components/common/Button";
@@ -18,7 +19,7 @@ import ErrorState from "../components/common/ErrorState";
 import ReadingModal from "../components/readings/ReadingModal";
 
 export default function DailyReports() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const outletContext = useOutletContext();
   const refreshTrigger = outletContext?.refreshTrigger || 0;
 
@@ -27,6 +28,8 @@ export default function DailyReports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   const fetchDailyReport = useCallback(
     async (dateToFetch) => {
@@ -62,6 +65,35 @@ export default function DailyReports() {
     setSelectedDate(`${year}-${month}-${day}`);
   }
 
+  async function handleDownloadPDF() {
+    try {
+      setDownloadingPdf(true);
+      setDownloadError("");
+
+      let readingsData = report?.readings;
+      let periodData = report?.period;
+
+      // Ensure we have current report data for selectedDate
+      if (!report || report.period?.start_date !== selectedDate) {
+        const response = await getDailyReport(selectedDate, token);
+        readingsData = response.data?.readings || [];
+        periodData = response.data?.period;
+      }
+
+      await downloadGlucoseReportPDF({
+        reportType: "daily",
+        selectedDate,
+        readings: readingsData || [],
+        period: periodData,
+        userName: user?.name || user?.email || "Sweety User",
+      });
+    } catch (err) {
+      setDownloadError(err.message || "Failed to generate Daily Report PDF.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   const statistics = report?.statistics || {
     highest: null,
     lowest: null,
@@ -84,7 +116,28 @@ export default function DailyReports() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={handleDownloadPDF}
+            disabled={downloadingPdf || loading}
+            icon={
+              downloadingPdf ? (
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 stroke-[2.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              )
+            }
+          >
+            {downloadingPdf ? "Generating PDF..." : "Download PDF"}
+          </Button>
+
           <Link to="/monthly-reports">
             <Button variant="outline" size="md">
               Switch to Monthly Report
@@ -92,6 +145,25 @@ export default function DailyReports() {
           </Link>
         </div>
       </div>
+
+      {/* PDF Download Error Banner */}
+      {downloadError && (
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 flex-shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span>{downloadError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDownloadError("")}
+            className="text-rose-500 hover:text-rose-700 font-bold text-xs cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* Date Selector Card with Quick Shortcuts */}
       <div className="bg-white rounded-[24px] sm:rounded-[28px] border border-[#E2EBF4] shadow-[0_10px_30px_rgba(10,56,126,0.05)] p-5 sm:p-6">

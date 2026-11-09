@@ -79,10 +79,10 @@ async function monthToDateReport(req, res) {
     }
 }
 
-// Previous monthly report
+// Monthly report
 async function monthlyReport(req, res) {
     try {
-        const { date } = req.query;
+        const { date, mode = "selected" } = req.query;
 
         const validation = validateReportDate(date);
 
@@ -96,7 +96,8 @@ async function monthlyReport(req, res) {
 
         const report = await getMonthlyReport(
             req.user.id,
-            date
+            date,
+            mode
         );
 
         return res.status(200).json({

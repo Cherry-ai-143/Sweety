@@ -26,10 +26,13 @@ export async function getMonthToDateReport(date, token) {
     );
 }
 
-// Get previous month's glucose report
-export async function getMonthlyReport(date, token) {
+// Get monthly glucose report (supports mode 'selected' for month-wise or 'previous')
+export async function getMonthlyReport(date, token, mode = "selected") {
+    const url = mode
+        ? `/reports/monthly?date=${encodeURIComponent(date)}&mode=${encodeURIComponent(mode)}`
+        : `/reports/monthly?date=${encodeURIComponent(date)}`;
     return apiRequest(
-        `/reports/monthly?date=${encodeURIComponent(date)}`,
+        url,
         {
             method: "GET",
             headers: {

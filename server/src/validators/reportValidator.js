@@ -15,20 +15,24 @@ function validateReportDate(date) {
     if (!date) {
         errors.date = "Please select a report date.";
     } else {
-        const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+        const datePattern = /^\d{4}-\d{2}(-\d{2})?$/;
 
         if (!datePattern.test(date)) {
             errors.date = "Please enter a valid date.";
         } else {
-            const parsedDate = new Date(`${date}T00:00:00Z`);
+            const isMonthOnly = /^\d{4}-\d{2}$/.test(date);
+            const fullDate = isMonthOnly ? `${date}-01` : date;
+            const parsedDate = new Date(`${fullDate}T00:00:00Z`);
 
             if (
                 Number.isNaN(parsedDate.getTime()) ||
-                parsedDate.toISOString().slice(0, 10) !== date
+                parsedDate.toISOString().slice(0, 10) !== fullDate
             ) {
                 errors.date = "Please enter a valid date.";
-            } else if (date > getTodayDate()) {
+            } else if (!isMonthOnly && date > getTodayDate()) {
                 errors.date = "Date cannot be in the future.";
+            } else if (isMonthOnly && date > getTodayDate().slice(0, 7)) {
+                errors.date = "Selected month cannot be in the future.";
             }
         }
     }
